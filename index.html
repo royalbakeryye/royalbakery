@@ -122,6 +122,334 @@
         /* تنسيق زر الموقع الجديد */
         .location-btn {
             width: 100%; background: #f0f7ff; color: #007bff; border: 1px solid #cce5ff; 
+            padding: 12px; border-radius: 10px; margin: 5px 0 10px; cursor: pointer; 
+            font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .location-btn.success { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+    </style>
+</head>
+<body>
+
+<div id="closed-overlay">
+    <div style="font-size: 60px; margin-bottom: 20px;">🏠</div>
+    <h2 style="color: var(--primary-orange);">نعتذر، المتجر مغلق حالياً</h2>
+    <p id="closed-reason" style="font-size: 18px; line-height: 1.6; max-width: 400px;"></p>
+    <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px; border-radius:10px; border:none; background:var(--primary-orange); color:white; font-weight:bold;">تحديث الصفحة 🔄</button>
+</div>
+
+<header>
+    <div class="logo">👑 ROYAL BAKERY</div>
+    <div id="status-dot"></div>
+</header>
+
+<div class="categories-nav" id="catNav">
+    <button class="cat-btn active" onclick="filterProducts('all', this)">✨ الكل</button>
+    <button class="cat-btn" onclick="filterProducts('pastry', this)">🥐 فطائر</button>
+    <button class="cat-btn" onclick="filterProducts('drink', this)">☕ مشروبات</button>
+    <button class="cat-btn" onclick="filterProducts('cake', this)">🍰 حلويات</button>
+</div>
+
+<div id="loading" style="text-align:center; padding: 50px; color: #888;">جاري تحميل القائمة...</div>
+
+<div class="products-container" id="products"></div>
+
+<div id="imageViewer" onclick="closeImageViewer()">
+    <img id="fullImage" src="">
+</div>
+
+<div class="bottom-nav">
+    <div style="color: white; font-size: 14px;">الإجمالي: <span id="nav-total" style="color: var(--gold); font-weight: bold; font-size: 18px;">0</span> ريال</div>
+    <div onclick="toggleModal()" style="color: white; cursor: pointer; font-weight: bold; background: var(--primary-orange); padding: 10px 20px; border-radius: 15px;">
+        🛒 السلة (<span id="nav-count">0</span>)
+    </div>
+</div>
+
+<div id="cartModal" class="modal">
+    <div class="modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0;">سلة التسوق 🛒</h3>
+            <button onclick="toggleModal()" style="font-size: 28px; border: none; background: none; color: #ccc; cursor: pointer;">&times;</button>
+        </div>
+
+        <div class="free-shipping-badge">🛵 خدمة التوصيل مجانية للجميع!</div>
+        
+        <div id="cartItemsList"></div>
+
+        <div style="margin-top: 20px; border-top: 2px dashed #eee; padding-top: 15px;">
+            <input type="text" id="custName" class="input-field" placeholder="اسم العميل" oninput="saveUserData()">
+            <input type="tel" id="custPhone" class="input-field" placeholder="رقم الجوال" oninput="saveUserData()">
+            <textarea id="fullAddress" class="input-field" style="height: 60px; resize: none;" placeholder="العنوان بالتفصيل" oninput="saveUserData()"></textarea>
+            
+            <button id="getLocBtn" onclick="getLocation()" class="location-btn">
+                📍 تحديد موقعي الحالي (GPS)
+            </button>
+
+            <textarea id="orderNotes" class="input-field" style="height: 60px; resize: none; background: #fffcf0; border-color: #f3e5ab;" placeholder="هل لديك ملاحظات إضافية؟"></textarea>
+        </div>
+
+        <div style="background: #fff9f5; padding: 15px; border-radius: 15px; margin: 15px 0; text-align: center; border: 1px solid #ffe0cc;">
+            <span style="font-size: 18px; font-weight: bold;">المجموع النهائي: <span id="modalTotal" style="color:var(--primary-orange);">0</span> ريال</span>
+        </div>
+
+        <button id="sendOrderBtn" onclick="handleOrder()" style="background: var(--whatsapp-green); color: white; border: none; width: 100%; padding: 16px; border-radius: 15px; font-size: 17px; font-weight: bold; cursor: pointer;">
+            تأكيد الطلب وإرسال الواتساب 💬
+        </button>
+        
+        <button onclick="clearCart()" style="width: 100%; background: none; border: none; color: var(--red); margin-top: 15px; cursor: pointer;">🗑️ تفريغ السلة</button>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://gemnsdsexkbyfdpozcwu.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlbW5zZHNleGtieWZkcG96Y3d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3NDgzNzcsImV4cCI6MjA4MjMyNDM3N30.QQt3zYL5rF4kr1u7cy2H_w3D08_GubhEL-Jpbdusjkc';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let allProducts = [];
+    let cart = JSON.parse(localStorage.getItem('royal_bakery_cart')) || {};
+    let storeSettings = { whatsapp_number: '967783409904', is_open: true, closing_message: 'المحل مغلق حالياً.' };
+    let userLocationUrl = ""; 
+
+    window.onload = async () => {
+        loadUserData();
+        await fetchSettings();
+        fetchProducts();
+    };
+
+    function getLocation() {
+        const btn = document.getElementById('getLocBtn');
+        if (navigator.geolocation) {
+            btn.innerText = "⏳ جاري تحديد موقعك...";
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                userLocationUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+                btn.innerText = "✅ تم تحديد الموقع بنجاح";
+                btn.classList.add('success');
+            }, (error) => {
+                alert("تعذر تحديد الموقع. يرجى التأكد من تفعيل GPS والسماح للمتصفح بالوصول.");
+                btn.innerText = "📍 تحديد موقعي الحالي (GPS)";
+            });
+        } else {
+            alert("متصفحك لا يدعم تحديد الموقع.");
+        }
+    }
+
+    async function fetchSettings() {
+        try {
+            const { data, error } = await _supabase.from('store_settings').select('*').limit(1).single();
+            if (data) {
+                storeSettings = data;
+                if (!storeSettings.is_open) {
+                    document.getElementById('closed-reason').innerText = storeSettings.closing_message;
+                    document.getElementById('closed-overlay').style.display = 'flex';
+                }
+            }
+        } catch (e) { console.log("Settings Load Error", e); }
+    }
+
+    async function fetchProducts() {
+        try {
+            const { data, error } = await _supabase.from('products').select('*');
+            if (error) throw error;
+            allProducts = data;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('status-dot').style.background = '#2ecc71';
+            renderProducts('all');
+            updateUI(); 
+        } catch (err) {
+            document.getElementById('loading').innerText = "خطأ في تحميل القائمة.";
+        }
+    }
+
+    function renderProducts(category) {
+        const container = document.getElementById('products');
+        const filtered = category === 'all' ? allProducts : allProducts.filter(p => p.type === category);
+        container.innerHTML = filtered.map(p => `
+            <div class="card">
+                <img src="${p.img}" class="product-img" onclick="openImageViewer('${p.img}')" onerror="this.src='https://via.placeholder.com/150?text=Royal+Bakery'">
+                <div class="product-title">${p.name}</div>
+                <div class="product-price">${p.price} ريال</div>
+                <button class="add-btn" onclick="addToCart(${p.id})">أضف للسلة</button>
+            </div>
+        `).join('');
+    }
+
+    function openImageViewer(src) {
+        document.getElementById('fullImage').src = src;
+        document.getElementById('imageViewer').style.display = 'flex';
+    }
+
+    function closeImageViewer() {
+        document.getElementById('imageViewer').style.display = 'none';
+    }
+
+    function filterProducts(type, btn) {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderProducts(type);
+    }
+
+    function addToCart(id) {
+        const item = allProducts.find(x => x.id === id);
+        if (cart[id]) cart[id].qty++;
+        else cart[id] = { ...item, qty: 1 };
+        updateUI();
+    }
+
+    function changeQty(id, delta) {
+        cart[id].qty += delta;
+        if (cart[id].qty <= 0) delete cart[id];
+        updateUI();
+    }
+
+    function removeItem(id) {
+        delete cart[id];
+        updateUI();
+    }
+
+    function clearCart() {
+        cart = {};
+        updateUI();
+    }
+
+    function updateUI() {
+        let count = 0, total = 0;
+        const list = document.getElementById('cartItemsList');
+        list.innerHTML = '';
+        for (let id in cart) {
+            count += cart[id].qty;
+            total += (cart[id].qty * cart[id].price);
+            list.innerHTML += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #eee;">
+                    <div style="flex:1; font-size:14px;"><b>${cart[id].name}</b><br>${cart[id].price} ريال</div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button class="qty-btn" onclick="changeQty(${id}, -1)">-</button>
+                        <span>${cart[id].qty}</span>
+                        <button class="qty-btn" onclick="changeQty(${id}, 1)">+</button>
+                        <button class="delete-item" onclick="removeItem(${id})">&times;</button>
+                    </div>
+                </div>`;
+        }
+        document.getElementById('nav-count').innerText = count;
+        document.getElementById('nav-total').innerText = total;
+        document.getElementById('modalTotal').innerText = total;
+        localStorage.setItem('royal_bakery_cart', JSON.stringify(cart));
+    }
+
+    function saveUserData() {
+        const userData = {
+            name: document.getElementById('custName').value,
+            phone: document.getElementById('custPhone').value,
+            address: document.getElementById('fullAddress').value
+        };
+        localStorage.setItem('royal_bakery_user', JSON.stringify(userData));
+    }
+
+    function loadUserData() {
+        const savedData = JSON.parse(localStorage.getItem('royal_bakery_user'));
+        if (savedData) {
+            document.getElementById('custName').value = savedData.name || '';
+            document.getElementById('custPhone').value = savedData.phone || '';
+            document.getElementById('fullAddress').value = savedData.address || '';
+        }
+    }
+
+    async function handleOrder() {
+        const name = document.getElementById('custName').value.trim();
+        const phone = document.getElementById('custPhone').value.trim();
+        const address = document.getElementById('fullAddress').value.trim();
+        const notes = document.getElementById('orderNotes').value.trim();
+        const total = document.getElementById('modalTotal').innerText;
+
+        if (!name || !address || Object.keys(cart).length === 0) {
+            return alert("يرجى ملء البيانات وإضافة منتجات للسلة 📋");
+        }
+
+        const btn = document.getElementById('sendOrderBtn');
+        btn.disabled = true;
+        btn.innerText = "جاري التحقق من حالة المتجر...";
+
+        try {
+            const { data: latestStatus } = await _supabase.from('store_settings').select('is_open, closing_message').limit(1).single();
+            
+            if (latestStatus && !latestStatus.is_open) {
+                alert("عذراً، تم إغلاق المتجر للتو: " + latestStatus.closing_message);
+                location.reload(); 
+                return;
+            }
+
+            await _supabase.from('orders').insert([{
+                customer_name: name,
+                phone: phone,
+                address: address,
+                location_url: userLocationUrl,
+                items: cart,
+                total_price: parseFloat(total),
+                status: 'قيد المراجعة',
+                notes: notes
+            }]);
+
+            let message = `*🧾 فاتورة طلب جديدة - المخبز الملكي*👑%0A`;
+            message += `------------------------------%0A`;
+            message += `*الاسم:* ${name}%0A`;
+            message += `*العنوان:* ${address}%0A`;
+            
+            if(userLocationUrl) {
+                message += `*📍 الموقع (GPS):* ${userLocationUrl}%0A`;
+            }
+
+            if(notes) message += `*الملاحظات:* ${notes}%0A`;
+            message += `------------------------------%0A`;
+            message += `*المنتجات:*%0A`;
+
+            for (let id in cart) {
+                message += `• ${cart[id].name} (×${cart[id].qty}) - ${cart[id].qty * cart[id].price} ريال%0A`;
+            }
+
+            message += `------------------------------%0A`;
+            message += `*💰 الإجمالي: ${total} ريال*%0A`;
+            message += `شكراً لاختياركم المخبز الملكي 🥖✨`;
+
+            window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${message}`, '_blank');
+            
+            cart = {};
+            document.getElementById('orderNotes').value = "";
+            userLocationUrl = ""; 
+            updateUI();
+            toggleModal();
+
+        } catch (e) {
+            alert("حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "تأكيد الطلب وإرسال الواتساب 💬";
+        }
+    }
+
+    function toggleModal() {
+        const m = document.getElementById('cartModal');
+        m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
+    }
+</script>
+</body>
+</html>
+            font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 15px;
+            border: 1px dashed #2e7d32;
+        }
+
+        #status-dot { width: 10px; height: 10px; border-radius: 50%; background: #bbb; }
+
+        /* شاشة الإغلاق المؤقت */
+        #closed-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(26, 26, 26, 0.98); z-index: 10000;
+            display: none; flex-direction: column; justify-content: center;
+            align-items: center; color: white; text-align: center; padding: 30px;
+        }
+
+        /* تنسيق زر الموقع الجديد */
+        .location-btn {
+            width: 100%; background: #f0f7ff; color: #007bff; border: 1px solid #cce5ff; 
             padding: 10px; border-radius: 10px; margin: 5px 0 10px; cursor: pointer; 
             font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;
         }
