@@ -118,6 +118,14 @@
             display: none; flex-direction: column; justify-content: center;
             align-items: center; color: white; text-align: center; padding: 30px;
         }
+
+        /* تنسيق زر الموقع الجديد */
+        .location-btn {
+            width: 100%; background: #f0f7ff; color: #007bff; border: 1px solid #cce5ff; 
+            padding: 10px; border-radius: 10px; margin: 5px 0 10px; cursor: pointer; 
+            font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .location-btn.success { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
     </style>
 </head>
 <body>
@@ -171,6 +179,11 @@
             <input type="text" id="custName" class="input-field" placeholder="اسم العميل" oninput="saveUserData()">
             <input type="tel" id="custPhone" class="input-field" placeholder="رقم الجوال" oninput="saveUserData()">
             <textarea id="fullAddress" class="input-field" style="height: 60px; resize: none;" placeholder="العنوان بالتفصيل" oninput="saveUserData()"></textarea>
+            
+            <button id="getLocBtn" onclick="getLocation()" class="location-btn">
+                📍 تحديد موقعي الحالي (GPS)
+            </button>
+
             <textarea id="orderNotes" class="input-field" style="height: 60px; resize: none; background: #fffcf0; border-color: #f3e5ab;" placeholder="هل لديك ملاحظات إضافية؟"></textarea>
         </div>
 
@@ -194,6 +207,7 @@
     let allProducts = [];
     let cart = JSON.parse(localStorage.getItem('royal_bakery_cart')) || {};
     let storeSettings = { whatsapp_number: '967783409904', is_open: true, closing_message: 'المحل مغلق حالياً.' };
+    let userLocationUrl = ""; // لتخزين رابط الموقع
 
     window.onload = async () => {
         loadUserData();
@@ -201,7 +215,26 @@
         fetchProducts();
     };
 
-    // جلب الإعدادات والتحقق من حالة المتجر
+    // دالة تحديد الموقع الجغرافي
+    function getLocation() {
+        const btn = document.getElementById('getLocBtn');
+        if (navigator.geolocation) {
+            btn.innerText = "⏳ جاري تحديد موقعك...";
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                userLocationUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+                btn.innerText = "✅ تم تحديد الموقع بنجاح";
+                btn.classList.add('success');
+            }, (error) => {
+                alert("تعذر تحديد الموقع. يرجى التأكد من تفعيل GPS والسماح للمتصفح بالوصول.");
+                btn.innerText = "📍 تحديد موقعي الحالي (GPS)";
+            });
+        } else {
+            alert("متصفحك لا يدعم تحديد الموقع.");
+        }
+    }
+
     async function fetchSettings() {
         try {
             const { data, error } = await _supabase.from('store_settings').select('*').limit(1).single();
@@ -322,7 +355,6 @@
         }
     }
 
-    // الدالة المعدلة مع التحقق اللحظي قبل إرسال الطلب
     async function handleOrder() {
         const name = document.getElementById('custName').value.trim();
         const phone = document.getElementById('custPhone').value.trim();
@@ -339,32 +371,34 @@
         btn.innerText = "جاري التحقق من حالة المتجر...";
 
         try {
-            // --- التحقق اللحظي قبل الحفظ والإرسال ---
             const { data: latestStatus } = await _supabase.from('store_settings').select('is_open, closing_message').limit(1).single();
             
             if (latestStatus && !latestStatus.is_open) {
                 alert("عذراً، تم إغلاق المتجر للتو: " + latestStatus.closing_message);
-                location.reload(); // إجبار الصفحة على التحديث لإظهار شاشة الإغلاق
+                location.reload(); 
                 return;
             }
-            // ---------------------------------------
 
-            // حفظ في Supabase
             await _supabase.from('orders').insert([{
                 customer_name: name,
                 phone: phone,
-                address: address,
+                address: address + (userLocationUrl ? " | الموقع: " + userLocationUrl : ""),
                 items: cart,
                 total_price: parseFloat(total),
                 status: 'قيد المراجعة',
                 notes: notes
             }]);
 
-            // بناء الفاتورة
             let message = `*🧾 فاتورة طلب جديدة - المخبز الملكي*👑%0A`;
             message += `------------------------------%0A`;
             message += `*الاسم:* ${name}%0A`;
             message += `*العنوان:* ${address}%0A`;
+            
+            // إضافة رابط الموقع لرسالة الواتساب
+            if(userLocationUrl) {
+                message += `*📍 الموقع (GPS):* ${userLocationUrl}%0A`;
+            }
+
             if(notes) message += `*الملاحظات:* ${notes}%0A`;
             message += `------------------------------%0A`;
             message += `*المنتجات:*%0A`;
@@ -377,11 +411,11 @@
             message += `*💰 الإجمالي: ${total} ريال*%0A`;
             message += `شكراً لاختياركم المخبز الملكي 🥖✨`;
 
-            // إرسال عبر الواتساب باستخدام الرقم الديناميكي
             window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${message}`, '_blank');
             
             cart = {};
             document.getElementById('orderNotes').value = "";
+            userLocationUrl = ""; // إعادة تعيين الموقع بعد الطلب
             updateUI();
             toggleModal();
 
