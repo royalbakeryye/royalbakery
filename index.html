@@ -26,7 +26,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* واجهة المتجر مغلق */
         #closed-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(26, 26, 26, 0.98); z-index: 10000;
@@ -57,7 +56,6 @@
             background: #fff; border: 1px solid #eee; padding: 10px 25px;
             border-radius: 50px; cursor: pointer; white-space: nowrap; 
             font-weight: 600; transition: 0.4s; font-size: 14px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
         }
         .cat-btn.active { 
             background: var(--luxury-gradient); color: white; 
@@ -88,7 +86,7 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 5; border-radius: 25px; pointer-events: none;
         }
-        .reason-box { background: var(--red); color: white; padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; margin-top: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .reason-box { background: var(--red); color: white; padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; margin-top: 5px; }
         
         .card.unavailable { opacity: 0.8; filter: grayscale(0.5); }
 
@@ -130,10 +128,7 @@
             transition: 0.3s;
         }
         
-        .pulse-animation {
-            animation: pulse-red 1.5s infinite;
-        }
-
+        .pulse-animation { animation: pulse-red 1.5s infinite; }
         @keyframes pulse-red {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
             70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
@@ -257,13 +252,8 @@
 
     async function fetchProducts() {
         try {
-            const { data, error } = await _supabase
-                .from('products')
-                .select('*')
-                .order('priority', { ascending: true });
-
+            const { data, error } = await _supabase.from('products').select('*').order('priority', { ascending: true });
             if (error) throw error;
-
             if (data) {
                 allProducts = data;
                 document.getElementById('loading').style.display = 'none';
@@ -271,28 +261,23 @@
                 renderProducts('all');
                 updateUI();
             }
-        } catch (e) { 
-            console.error("Error fetching products:", e);
-            document.getElementById('loading').innerText = "خطأ في التحميل، يرجى المحاولة لاحقاً"; 
-        }
+        } catch (e) { document.getElementById('loading').innerText = "خطأ في التحميل"; }
     }
 
     function renderProducts(category) {
         const container = document.getElementById('products');
         const filtered = category === 'all' ? allProducts : allProducts.filter(p => p.type === category);
-        
         container.innerHTML = filtered.map(p => {
             const isAvailable = p.is_available !== false;
-            const stars = "⭐".repeat(p.rating || 5);
             return `
             <div class="card ${!isAvailable ? 'unavailable' : ''}">
                 ${!isAvailable ? `<div class="unavailable-tag"><div class="reason-box">${p.unavailable_reason || 'نفذت الكمية'}</div></div>` : ''}
                 <img src="${p.img}" class="product-img" onclick="openImageViewer('${p.img}')">
                 <div class="product-title">${p.name}</div>
-                <div class="rating">${stars}</div>
+                <div class="rating">⭐⭐⭐⭐⭐</div>
                 <div class="product-price">${p.price} ريال</div>
-                <button class="add-btn" onclick="addToCart(${p.id})" ${!isAvailable ? 'disabled style="background: #ccc; box-shadow:none;"' : ''}>
-                    ${isAvailable ? 'أضف للسلة +' : 'غير متوفر حالياً'}
+                <button class="add-btn" onclick="addToCart(${p.id})" ${!isAvailable ? 'disabled style="background: #ccc;"' : ''}>
+                    ${isAvailable ? 'أضف للسلة +' : 'غير متوفر'}
                 </button>
             </div>`;
         }).join('');
@@ -302,16 +287,11 @@
         const btn = document.getElementById('getLocBtn');
         if (navigator.geolocation) {
             btn.innerText = "⏳ جاري التحديد...";
-            btn.classList.remove('pulse-animation');
             navigator.geolocation.getCurrentPosition((pos) => {
                 userLocationUrl = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
-                btn.innerText = "✅ تم تحديد موقعك بنجاح";
+                btn.innerText = "✅ تم تحديد موقعك";
                 btn.classList.add('success');
-            }, () => { 
-                alert("يرجى تفعيل GPS"); 
-                btn.innerText = "📍 اضغط هنا لتحديد موقعك GPS";
-                btn.classList.add('pulse-animation');
-            });
+            }, () => { alert("يرجى تفعيل GPS"); btn.innerText = "📍 اضغط هنا لتحديد موقعك GPS"; });
         }
     }
 
@@ -331,10 +311,9 @@
             <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 0; border-bottom:1px solid #f9f9f9;">
                 <div><b>${cart[id].name}</b><br><small>${cart[id].price} ريال</small></div>
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <button style="width:25px; height:25px; border-radius:5px; border:1px solid #ddd;" onclick="changeQty(${id}, -1)">-</button>
+                    <button onclick="changeQty(${id}, -1)">-</button>
                     <span>${cart[id].qty}</span>
-                    <button style="width:25px; height:25px; border-radius:5px; border:1px solid #ddd;" onclick="changeQty(${id}, 1)">+</button>
-                    <button style="color:red; border:none; background:none; font-size:18px;" onclick="removeItem(${id})">×</button>
+                    <button onclick="changeQty(${id}, 1)">+</button>
                 </div>
             </div>`;
         }
@@ -345,47 +324,29 @@
     }
 
     function changeQty(id, d) { cart[id].qty += d; if(cart[id].qty<=0) delete cart[id]; updateUI(); }
-    function removeItem(id) { delete cart[id]; updateUI(); }
     function clearCart() { cart = {}; updateUI(); }
     function toggleModal() { const m = document.getElementById('cartModal'); m.style.display = (m.style.display==='flex')?'none':'flex'; }
     function openImageViewer(s) { document.getElementById('fullImage').src=s; document.getElementById('imageViewer').style.display='flex'; }
     function closeImageViewer() { document.getElementById('imageViewer').style.display='none'; }
     function filterProducts(t, b) { document.querySelectorAll('.cat-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderProducts(t); }
-    
-    function saveUserData() { 
-        localStorage.setItem('royal_bakery_user', JSON.stringify({
-            name: document.getElementById('custName').value, 
-            phone: document.getElementById('custPhone').value
-        })); 
-    }
-    
-    function loadUserData() { 
-        const d = JSON.parse(localStorage.getItem('royal_bakery_user')); 
-        if(d){
-            document.getElementById('custName').value = d.name || ''; 
-            document.getElementById('custPhone').value = d.phone || '';
-        }
-    }
+    function saveUserData() { localStorage.setItem('royal_bakery_user', JSON.stringify({name:document.getElementById('custName').value, phone:document.getElementById('custPhone').value})); }
+    function loadUserData() { const d = JSON.parse(localStorage.getItem('royal_bakery_user')); if(d){document.getElementById('custName').value=d.name||''; document.getElementById('custPhone').value=d.phone||'';}}
 
     async function handleOrder() {
         const name = document.getElementById('custName').value.trim();
         const phone = document.getElementById('custPhone').value.trim();
-        const notes = document.getElementById('orderNotes').value.trim();
         const total = document.getElementById('modalTotal').innerText;
+        const notes = document.getElementById('orderNotes').value;
 
-        if(!name || !phone || !userLocationUrl || Object.keys(cart).length === 0) {
-            return alert("اكمل البيانات (الاسم ورقم الهاتف) وحدد الموقع 📍");
-        }
+        if(!name || !phone || !userLocationUrl || Object.keys(cart).length === 0) return alert("اكمل البيانات والموقع 📍");
         
         const btn = document.getElementById('sendOrderBtn');
-        btn.disabled = true; 
-        btn.innerText = "جاري الإرسال...";
+        btn.disabled = true; btn.innerText = "جاري الإرسال...";
         
         try {
-            // إرسال البيانات إلى Supabase بما فيها رقم الهاتف
             const { error } = await _supabase.from('orders').insert([{ 
                 customer_name: name, 
-                customer_phone: phone, 
+                phone: phone, 
                 location_url: userLocationUrl, 
                 items: cart, 
                 total_price: parseFloat(total), 
@@ -394,33 +355,17 @@
 
             if (error) throw error;
 
-            // تجهيز نص رسالة الواتساب
-            let msg = `*🧾 طلب جديد - المخبز الملكي*%0A`;
-            msg += `*الاسم:* ${name}%0A`;
-            msg += `*الهاتف:* ${phone}%0A`;
-            msg += `*الموقع:* ${userLocationUrl}%0A`;
-            msg += `*الطلبات:*%0A`;
-            for(let id in cart) {
-                msg += `- ${cart[id].name} (x${cart[id].qty})%0A`;
-            }
-            msg += `*الإجمالي:* ${total} ريال%0A`;
-            if(notes) msg += `*ملاحظات:* ${notes}`;
-
-            window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${msg}`, '_blank');
+            let msg = `*🧾 طلب جديد*%0A*الاسم:* ${name}%0A*الهاتف:* ${phone}%0A*الموقع:* ${userLocationUrl}%0A*الطلبات:*%0A`;
+            for(let id in cart) msg += `- ${cart[id].name} (x${cart[id].qty})%0A`;
+            msg += `*الإجمالي:* ${total} ريال`;
             
-            // تصفير السلة بعد النجاح
-            cart = {}; 
-            updateUI(); 
-            toggleModal();
-            alert("تم إرسال طلبك بنجاح!");
-
+            window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${msg}`, '_blank');
+            cart={}; updateUI(); toggleModal();
+            alert("تم إرسال الطلب بنجاح!");
         } catch(e) { 
             console.error(e);
-            alert("حدث خطأ في الإرسال، يرجى المحاولة لاحقاً."); 
-        } finally { 
-            btn.disabled = false; 
-            btn.innerText = "تأكيد الطلب عبر الواتساب 💬"; 
-        }
+            alert("حدث خطأ في الإرسال، يرجى التأكد من إعدادات Supabase"); 
+        } finally { btn.disabled=false; btn.innerText="تأكيد الطلب عبر الواتساب 💬"; }
     }
 </script>
 </body>
