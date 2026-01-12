@@ -82,16 +82,14 @@
         .rating { color: #ffc107; font-size: 12px; margin-bottom: 8px; }
         .product-price { color: var(--primary-orange); font-weight: 800; margin-bottom: 12px; font-size: 18px; }
 
-        /* التعديل: جعل المنتج ظاهراً مع طبقة خفيفة جداً */
         .unavailable-tag {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.4); /* شفافية لظهور المنتج */
+            background: rgba(255, 255, 255, 0.4);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 5; border-radius: 25px; pointer-events: none; /* للسماح بالنقر من خلالها */
+            z-index: 5; border-radius: 25px; pointer-events: none;
         }
         .reason-box { background: var(--red); color: white; padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; margin-top: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         
-        /* تبهيت المنتج غير المتوفر قليلاً */
         .card.unavailable { opacity: 0.8; filter: grayscale(0.5); }
 
         .add-btn {
@@ -126,7 +124,6 @@
         }
         #fullImage { max-width: 90%; max-height: 80%; border-radius: 15px; border: 3px solid white; }
 
-        /* تعديل زر الموقع مع أنيميشن الوميض */
         .location-btn {
             width: 100%; background: #fef2f2; color: var(--red); border: 2px dashed var(--red); 
             padding: 15px; border-radius: 15px; margin: 15px 0; cursor: pointer; font-weight: bold;
@@ -259,27 +256,26 @@
     }
 
     async function fetchProducts() {
-    try {
-        const { data, error } = await _supabase
-            .from('products')
-            .select('*')
-            .order('priority', { ascending: true }); // الترتيب من الرقم الأصغر إلى الأكبر
+        try {
+            const { data, error } = await _supabase
+                .from('products')
+                .select('*')
+                .order('priority', { ascending: true });
 
-        if (error) throw error;
+            if (error) throw error;
 
-        if (data) {
-            allProducts = data;
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('status-dot').style.background = '#2ecc71';
-            renderProducts('all');
-            updateUI();
+            if (data) {
+                allProducts = data;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('status-dot').style.background = '#2ecc71';
+                renderProducts('all');
+                updateUI();
+            }
+        } catch (e) { 
+            console.error("Error fetching products:", e);
+            document.getElementById('loading').innerText = "خطأ في التحميل، يرجى المحاولة لاحقاً"; 
         }
-    } catch (e) { 
-        console.error("Error fetching products:", e);
-        document.getElementById('loading').innerText = "خطأ في التحميل، يرجى المحاولة لاحقاً"; 
     }
-}
-
 
     function renderProducts(category) {
         const container = document.getElementById('products');
@@ -306,7 +302,7 @@
         const btn = document.getElementById('getLocBtn');
         if (navigator.geolocation) {
             btn.innerText = "⏳ جاري التحديد...";
-            btn.classList.remove('pulse-animation'); // إيقاف الوميض عند البدء
+            btn.classList.remove('pulse-animation');
             navigator.geolocation.getCurrentPosition((pos) => {
                 userLocationUrl = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
                 btn.innerText = "✅ تم تحديد موقعك بنجاح";
@@ -314,7 +310,7 @@
             }, () => { 
                 alert("يرجى تفعيل GPS"); 
                 btn.innerText = "📍 اضغط هنا لتحديد موقعك GPS";
-                btn.classList.add('pulse-animation'); // إعادة الوميض في حال الفشل
+                btn.classList.add('pulse-animation');
             });
         }
     }
@@ -355,25 +351,76 @@
     function openImageViewer(s) { document.getElementById('fullImage').src=s; document.getElementById('imageViewer').style.display='flex'; }
     function closeImageViewer() { document.getElementById('imageViewer').style.display='none'; }
     function filterProducts(t, b) { document.querySelectorAll('.cat-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderProducts(t); }
-    function saveUserData() { localStorage.setItem('royal_bakery_user', JSON.stringify({name:document.getElementById('custName').value, phone:document.getElementById('custPhone').value})); }
-    function loadUserData() { const d = JSON.parse(localStorage.getItem('royal_bakery_user')); if(d){document.getElementById('custName').value=d.name||''; document.getElementById('custPhone').value=d.phone||'';}}
+    
+    function saveUserData() { 
+        localStorage.setItem('royal_bakery_user', JSON.stringify({
+            name: document.getElementById('custName').value, 
+            phone: document.getElementById('custPhone').value
+        })); 
+    }
+    
+    function loadUserData() { 
+        const d = JSON.parse(localStorage.getItem('royal_bakery_user')); 
+        if(d){
+            document.getElementById('custName').value = d.name || ''; 
+            document.getElementById('custPhone').value = d.phone || '';
+        }
+    }
 
     async function handleOrder() {
         const name = document.getElementById('custName').value.trim();
+        const phone = document.getElementById('custPhone').value.trim();
+        const notes = document.getElementById('orderNotes').value.trim();
         const total = document.getElementById('modalTotal').innerText;
-        if(!name || !userLocationUrl || Object.keys(cart).length === 0) return alert("اكمل البيانات والموقع 📍");
+
+        if(!name || !phone || !userLocationUrl || Object.keys(cart).length === 0) {
+            return alert("اكمل البيانات (الاسم ورقم الهاتف) وحدد الموقع 📍");
+        }
         
         const btn = document.getElementById('sendOrderBtn');
-        btn.disabled = true; btn.innerText = "جاري الإرسال...";
+        btn.disabled = true; 
+        btn.innerText = "جاري الإرسال...";
         
         try {
-            await _supabase.from('orders').insert([{ customer_name: name, location_url: userLocationUrl, items: cart, total_price: parseFloat(total), notes: document.getElementById('orderNotes').value }]);
-            let msg = `*🧾 طلب جديد - المخبز الملكي*%0A*الاسم:* ${name}%0A*الموقع:* ${userLocationUrl}%0A*الطلبات:*%0A`;
-            for(let id in cart) msg += `- ${cart[id].name} (x${cart[id].qty})%0A`;
-            msg += `*الإجمالي:* ${total} ريال`;
+            // إرسال البيانات إلى Supabase بما فيها رقم الهاتف
+            const { error } = await _supabase.from('orders').insert([{ 
+                customer_name: name, 
+                customer_phone: phone, 
+                location_url: userLocationUrl, 
+                items: cart, 
+                total_price: parseFloat(total), 
+                notes: notes 
+            }]);
+
+            if (error) throw error;
+
+            // تجهيز نص رسالة الواتساب
+            let msg = `*🧾 طلب جديد - المخبز الملكي*%0A`;
+            msg += `*الاسم:* ${name}%0A`;
+            msg += `*الهاتف:* ${phone}%0A`;
+            msg += `*الموقع:* ${userLocationUrl}%0A`;
+            msg += `*الطلبات:*%0A`;
+            for(let id in cart) {
+                msg += `- ${cart[id].name} (x${cart[id].qty})%0A`;
+            }
+            msg += `*الإجمالي:* ${total} ريال%0A`;
+            if(notes) msg += `*ملاحظات:* ${notes}`;
+
             window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${msg}`, '_blank');
-            cart={}; updateUI(); toggleModal();
-        } catch(e) { alert("خطأ في الإرسال"); } finally { btn.disabled=false; btn.innerText="تأكيد الطلب عبر الواتساب 💬"; }
+            
+            // تصفير السلة بعد النجاح
+            cart = {}; 
+            updateUI(); 
+            toggleModal();
+            alert("تم إرسال طلبك بنجاح!");
+
+        } catch(e) { 
+            console.error(e);
+            alert("حدث خطأ في الإرسال، يرجى المحاولة لاحقاً."); 
+        } finally { 
+            btn.disabled = false; 
+            btn.innerText = "تأكيد الطلب عبر الواتساب 💬"; 
+        }
     }
 </script>
 </body>
