@@ -317,30 +317,83 @@
     function loadUserData() { document.getElementById('custPhone').value = localStorage.getItem('royal_bakery_user_phone') || ''; }
 
     function getLocation() {
-        const btn = document.getElementById('getLocBtn');
-        if (navigator.geolocation) {
-            btn.innerText = "⏳ جاري التحديد...";
-            navigator.geolocation.getCurrentPosition((pos) => {
-                userLocationUrl = `http://googleusercontent.com/maps.google.com/4{pos.coords.latitude},${pos.coords.longitude}`;
-                btn.innerText = "✅ تم تحديد موقعك";
-                btn.classList.add('success');
-            }, () => { alert("يرجى تفعيل GPS"); btn.innerText = "📍 تحديد موقعك GPS"; });
-        }
+    const btn = document.getElementById('getLocBtn');
+    if (navigator.geolocation) {
+        btn.innerText = "⏳ جاري التحديد...";
+        navigator.geolocation.getCurrentPosition((pos) => {
+            // تصحيح الرابط هنا
+            userLocationUrl = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+            btn.innerText = "✅ تم تحديد موقعك";
+            btn.classList.add('success');
+        }, () => { 
+            alert("يرجى تفعيل الـ GPS ومنح الإذن للمتصفح"); 
+            btn.innerText = "📍 تحديد موقعك GPS"; 
+        });
     }
+}
+
 
     async function handleOrder() {
-        if(!storeSettings.is_open) return alert("نعتذر، المحل مغلق");
-        const phone = document.getElementById('custPhone').value.trim();
-        const total = document.getElementById('modalTotal').innerText;
-        if(phone.length < 9 || !userLocationUrl || Object.keys(cart).length === 0) return alert("يرجى إكمال البيانات");
-        
-        try {
-            await _supabase.from('orders').insert([{ phone: "+967" + phone, location_url: userLocationUrl, items: cart, total_price: parseFloat(total), notes: document.getElementById('orderNotes').value }]);
-            let msg = `*🧾 طلب جديد*%0A*الهاتف:* 967${phone}%0A*الموقع:* ${userLocationUrl}%0A*الإجمالي:* ${total} ريال`;
-            window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(msg)}`, '_blank');
-            cart={}; updateUI(); toggleModal();
-        } catch(e) { alert("خطأ في الإرسال"); }
+    if(!storeSettings.is_open) return alert("نعتذر، المحل مغلق");
+    
+    const phone = document.getElementById('custPhone').value.trim();
+    const total = document.getElementById('modalTotal').innerText;
+    const notes = document.getElementById('orderNotes').value.trim();
+    
+    if(phone.length < 9 || !userLocationUrl || Object.keys(cart).length === 0) {
+        return alert("يرجى إكمال البيانات: رقم الهاتف، تحديد الموقع، وإضافة منتجات للسلة");
     }
+
+    // 1. بناء قائمة المنتجات بشكل منظم
+    let itemsList = "";
+    for (let id in cart) {
+        let item = cart[id];
+        itemsList += `🔸 *${item.name}* \n   الكمية: (${item.qty}) | السعر: ${item.qty * item.price} ريال\n`;
+    }
+
+    // 2. صياغة الرسالة النهائية بتنسيق احترافي
+    let message = `*👑 طلب جديد - المخبز الملكي 👑*
+------------------------------
+*📞 رقم العميل:*
++967${phone}
+
+*📦 الطلبات:*
+${itemsList}
+------------------------------
+*💰 الإجمالي النهائي:* ${total} ريال
+*🚚 التوصيل:* مجاني
+
+*📍 موقع التوصيل (GPS):*
+${userLocationUrl}
+
+${notes ? `*📝 ملاحظات إضافية:* \n${notes}` : ''}
+
+*شكراً لاختيارك المخبز الملكي! ✨*`;
+
+    try {
+        // حفظ في قاعدة البيانات
+        await _supabase.from('orders').insert([{ 
+            phone: "+967" + phone, 
+            location_url: userLocationUrl, 
+            items: cart, 
+            total_price: parseFloat(total), 
+            notes: notes 
+        }]);
+
+        // فتح واتساب بالرسالة المنسقة
+        const whatsappUrl = `https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+        
+        // تنظيف السلة
+        cart = {}; 
+        updateUI(); 
+        toggleModal();
+        
+    } catch(e) { 
+        alert("حدث خطأ أثناء إرسال الطلب، يرجى المحاولة لاحقاً"); 
+    }
+}
+
 </script>
 </body>
 </html>
