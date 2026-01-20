@@ -26,29 +26,30 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        #closed-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(26, 26, 26, 0.98); z-index: 10000;
-            display: none; flex-direction: column; justify-content: center;
-            align-items: center; color: white; text-align: center; padding: 30px;
-            backdrop-filter: blur(10px);
-        }
-
         header {
             background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px); padding: 20px;
+            backdrop-filter: blur(10px); padding: 15px 20px;
             display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 2px 20px rgba(0,0,0,0.03);
             position: sticky; top: 0; z-index: 1000;
         }
 
-        .logo { font-size: 22px; font-weight: 900; color: var(--dark-black); letter-spacing: 1px; }
+        .header-brand { display: flex; align-items: center; gap: 10px; }
+        .logo { font-size: 20px; font-weight: 900; color: var(--dark-black); letter-spacing: 1px; }
         .logo span { color: var(--gold); }
+
+        .closed-status-tag {
+            background: #fff0f0; color: var(--red); padding: 4px 12px;
+            border-radius: 12px; font-size: 12px; font-weight: bold;
+            border: 1px solid #ffebeb; display: none; animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
         .categories-nav {
             display: flex; gap: 12px; padding: 15px; overflow-x: auto;
             background: var(--white); border-bottom: 1px solid #f0f0f0;
-            position: sticky; top: 65px; z-index: 999; scrollbar-width: none;
+            position: sticky; top: 60px; z-index: 999; scrollbar-width: none;
         }
         .categories-nav::-webkit-scrollbar { display: none; }
 
@@ -76,8 +77,7 @@
         .card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.12); }
 
         .product-img { width: 100%; height: 140px; object-fit: cover; border-radius: 20px; background: #fdfdfd; cursor: zoom-in; transition: 0.3s; }
-        .product-title { font-weight: 700; margin: 12px 0 5px; font-size: 15px; color: #333; }
-        .rating { color: #ffc107; font-size: 12px; margin-bottom: 8px; }
+        .product-title { font-weight: 700; margin: 12px 0 15px; font-size: 15px; color: #333; }
         .product-price { color: var(--primary-orange); font-weight: 800; margin-bottom: 12px; font-size: 18px; }
 
         .unavailable-tag {
@@ -87,8 +87,6 @@
             z-index: 5; border-radius: 25px; pointer-events: none;
         }
         .reason-box { background: var(--red); color: white; padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; margin-top: 5px; }
-        
-        .card.unavailable { opacity: 0.8; filter: grayscale(0.5); }
 
         .add-btn {
             background: var(--luxury-gradient); color: white; border: none;
@@ -107,13 +105,18 @@
             padding: 30px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.4s ease-out;
         }
 
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .phone-input-container {
+            display: flex; align-items: center; background: #f9f9f9;
+            border: 2px solid #eee; border-radius: 16px; direction: ltr;
+        }
+        .country-prefix { display: flex; align-items: center; gap: 8px; padding: 0 15px; border-right: 2px solid #eee; font-weight: 800; }
+        .phone-input-container input { border: none; padding: 15px; outline: none; width: 100%; font-size: 18px; font-weight: bold; background: transparent; }
 
         .bottom-nav {
             position: fixed; bottom: 20px; left: 20px; right: 20px; 
             background: var(--dark-black); border-radius: 25px;
             display: flex; justify-content: space-between; align-items: center; 
-            padding: 15px 25px; z-index: 1500; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 15px 25px; z-index: 1500;
         }
 
         #imageViewer {
@@ -127,33 +130,19 @@
             padding: 15px; border-radius: 15px; margin: 15px 0; cursor: pointer; font-weight: bold;
             transition: 0.3s;
         }
-        
-        .pulse-animation { animation: pulse-red 1.5s infinite; }
-        @keyframes pulse-red {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
-            70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
-        }
-
-        .location-btn.success { 
-            background: #f0fdf4; color: #166534; border-style: solid; 
-            border-color: #166534; animation: none; transform: scale(1); 
-        }
-
+        .location-btn.success { background: #f0fdf4; color: #166534; border-style: solid; border-color: #166534; }
         #status-dot { width: 10px; height: 10px; border-radius: 50%; background: #bbb; }
+
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-<div id="closed-overlay">
-    <div style="font-size: 70px; margin-bottom: 25px;">🌙</div>
-    <h2 style="color: var(--primary-orange); font-size: 28px;">نعتذر، المتجر مغلق حالياً</h2>
-    <p id="closed-reason" style="font-size: 18px; opacity: 0.8;"></p>
-    <button onclick="location.reload()" style="margin-top:25px; padding:12px 30px; border-radius:15px; border:none; background:var(--luxury-gradient); color:white; font-weight:bold; cursor:pointer;">تحديث الحالة 🔄</button>
-</div>
-
 <header>
-    <div class="logo">ROYAL <span>BAKERY</span> 👑</div>
+    <div class="header-brand">
+        <div class="logo">ROYAL <span>BAKERY</span> 👑</div>
+        <div id="store-closed-msg" class="closed-status-tag"></div>
+    </div>
     <div id="status-dot"></div>
 </header>
 
@@ -188,12 +177,12 @@
         <div id="cartItemsList"></div>
 
         <div style="margin-top: 25px;">
-            <input type="text" id="custName" placeholder="اسمك الكريم" oninput="saveUserData()" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 10px; outline: none; box-sizing: border-box;">
-            <input type="tel" id="custPhone" placeholder="رقم الجوال" oninput="saveUserData()" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 10px; outline: none; box-sizing: border-box;">
-            
-            <button id="getLocBtn" onclick="getLocation()" class="location-btn pulse-animation">📍 اضغط هنا لتحديد موقعك GPS</button>
-
-            <textarea id="orderNotes" style="width: 100%; height: 80px; padding: 15px; border-radius: 12px; border: 1px solid #eee; outline: none; box-sizing: border-box; resize: none;" placeholder="أي ملاحظات إضافية؟"></textarea>
+            <div class="phone-input-container">
+                <div class="country-prefix"><img src="https://flagcdn.com/w40/ye.png" width="24"><span>+967</span></div>
+                <input type="tel" id="custPhone" placeholder="7XXXXXXXX" oninput="validatePhone(this); saveUserData();" maxlength="9">
+            </div>
+            <button id="getLocBtn" onclick="getLocation()" class="location-btn">📍 تحديد موقعك GPS</button>
+            <textarea id="orderNotes" style="width: 100%; height: 60px; padding: 10px; border-radius: 10px; border: 1px solid #eee; outline: none; margin-bottom:15px;" placeholder="أي ملاحظات إضافية؟"></textarea>
         </div>
 
         <div style="background: #fff9f5; padding: 20px; border-radius: 20px; margin: 20px 0; text-align: center; border: 1px solid #ffe0cc;">
@@ -213,7 +202,7 @@
 
     let allProducts = [];
     let cart = JSON.parse(localStorage.getItem('royal_bakery_cart')) || {};
-    let storeSettings = { whatsapp_number: '967783409904', is_open: true, closing_message: 'المحل مغلق حالياً.' };
+    let storeSettings = { is_open: true };
     let userLocationUrl = ""; 
 
     window.onload = async () => {
@@ -223,45 +212,47 @@
         fetchProducts();
     };
 
-    function closeCartOnOverlay(e) { if(e.target.id === 'cartModal') toggleModal(); }
-
     async function fetchSettings() {
         try {
             const { data } = await _supabase.from('store_settings').select('*').limit(1).single();
             if (data) {
                 storeSettings = data;
-                if (storeSettings.is_open === false) {
-                    document.getElementById('closed-reason').innerText = storeSettings.closing_message;
-                    document.getElementById('closed-overlay').style.display = 'flex';
+                const statusDot = document.getElementById('status-dot');
+                const closedMsg = document.getElementById('store-closed-msg');
+                if (!storeSettings.is_open) {
+                    statusDot.style.background = '#e74c3c';
+                    closedMsg.innerText = storeSettings.closing_message;
+                    closedMsg.style.display = 'inline-block';
+                } else {
+                    statusDot.style.background = '#2ecc71';
                 }
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { }
     }
 
     async function fetchCategories() {
         try {
-            const { data } = await _supabase.from('categories').select('*').order('id');
+            const { data } = await _supabase.from('categories').select('*').order('priority', { ascending: true });
             if (data) {
                 const nav = document.getElementById('catNav');
+                nav.innerHTML = '<button class="cat-btn active" onclick="filterProducts(\'all\', this)">✨ الكل</button>';
                 data.forEach(cat => {
                     nav.innerHTML += `<button class="cat-btn" onclick="filterProducts('${cat.slug}', this)">${cat.icon || ''} ${cat.name}</button>`;
                 });
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { }
     }
 
     async function fetchProducts() {
         try {
-            const { data, error } = await _supabase.from('products').select('*').order('priority', { ascending: true });
-            if (error) throw error;
+            const { data } = await _supabase.from('products').select('*').order('priority', { ascending: true });
             if (data) {
                 allProducts = data;
                 document.getElementById('loading').style.display = 'none';
-                document.getElementById('status-dot').style.background = '#2ecc71';
                 renderProducts('all');
                 updateUI();
             }
-        } catch (e) { document.getElementById('loading').innerText = "خطأ في التحميل"; }
+        } catch (e) { }
     }
 
     function renderProducts(category) {
@@ -271,10 +262,9 @@
             const isAvailable = p.is_available !== false;
             return `
             <div class="card ${!isAvailable ? 'unavailable' : ''}">
-                ${!isAvailable ? `<div class="unavailable-tag"><div class="reason-box">${p.unavailable_reason || 'نفذت الكمية'}</div></div>` : ''}
+                ${!isAvailable ? `<div class="unavailable-tag"><div class="reason-box">${p.unavailable_reason || 'نفذت'}</div></div>` : ''}
                 <img src="${p.img}" class="product-img" onclick="openImageViewer('${p.img}')">
                 <div class="product-title">${p.name}</div>
-                <div class="rating">⭐⭐⭐⭐⭐</div>
                 <div class="product-price">${p.price} ريال</div>
                 <button class="add-btn" onclick="addToCart(${p.id})" ${!isAvailable ? 'disabled style="background: #ccc;"' : ''}>
                     ${isAvailable ? 'أضف للسلة +' : 'غير متوفر'}
@@ -283,19 +273,13 @@
         }).join('');
     }
 
-    function getLocation() {
-        const btn = document.getElementById('getLocBtn');
-        if (navigator.geolocation) {
-            btn.innerText = "⏳ جاري التحديد...";
-            navigator.geolocation.getCurrentPosition((pos) => {
-                userLocationUrl = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
-                btn.innerText = "✅ تم تحديد موقعك";
-                btn.classList.add('success');
-            }, () => { alert("يرجى تفعيل GPS"); btn.innerText = "📍 اضغط هنا لتحديد موقعك GPS"; });
-        }
+    function validatePhone(input) {
+        input.value = input.value.replace(/[^0-9]/g, '');
+        if (input.value.length > 0 && input.value[0] !== '7') { input.value = ''; alert("يجب أن يبدأ بـ 7"); }
     }
 
     function addToCart(id) {
+        if(!storeSettings.is_open) return alert("المحل مغلق حالياً");
         const item = allProducts.find(x => x.id === id);
         if (cart[id]) cart[id].qty++; else cart[id] = { ...item, qty: 1 };
         updateUI();
@@ -307,13 +291,12 @@
         list.innerHTML = '';
         for (let id in cart) {
             count += cart[id].qty; total += (cart[id].qty * cart[id].price);
-            list.innerHTML += `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 0; border-bottom:1px solid #f9f9f9;">
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f9f9f9;">
                 <div><b>${cart[id].name}</b><br><small>${cart[id].price} ريال</small></div>
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <button onclick="changeQty(${id}, -1)">-</button>
-                    <span>${cart[id].qty}</span>
-                    <button onclick="changeQty(${id}, 1)">+</button>
+                    <button style="width:30px; height:30px; border-radius:10px; border:1px solid #ddd; background:#fff;" onclick="changeQty(${id}, -1)">-</button>
+                    <span style="font-weight:bold;">${cart[id].qty}</span>
+                    <button style="width:30px; height:30px; border-radius:10px; border:1px solid #ddd; background:#fff;" onclick="changeQty(${id}, 1)">+</button>
                 </div>
             </div>`;
         }
@@ -326,46 +309,37 @@
     function changeQty(id, d) { cart[id].qty += d; if(cart[id].qty<=0) delete cart[id]; updateUI(); }
     function clearCart() { cart = {}; updateUI(); }
     function toggleModal() { const m = document.getElementById('cartModal'); m.style.display = (m.style.display==='flex')?'none':'flex'; }
+    function closeCartOnOverlay(e) { if(e.target.id === 'cartModal') toggleModal(); }
     function openImageViewer(s) { document.getElementById('fullImage').src=s; document.getElementById('imageViewer').style.display='flex'; }
     function closeImageViewer() { document.getElementById('imageViewer').style.display='none'; }
     function filterProducts(t, b) { document.querySelectorAll('.cat-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderProducts(t); }
-    function saveUserData() { localStorage.setItem('royal_bakery_user', JSON.stringify({name:document.getElementById('custName').value, phone:document.getElementById('custPhone').value})); }
-    function loadUserData() { const d = JSON.parse(localStorage.getItem('royal_bakery_user')); if(d){document.getElementById('custName').value=d.name||''; document.getElementById('custPhone').value=d.phone||'';}}
+    function saveUserData() { localStorage.setItem('royal_bakery_user_phone', document.getElementById('custPhone').value); }
+    function loadUserData() { document.getElementById('custPhone').value = localStorage.getItem('royal_bakery_user_phone') || ''; }
+
+    function getLocation() {
+        const btn = document.getElementById('getLocBtn');
+        if (navigator.geolocation) {
+            btn.innerText = "⏳ جاري التحديد...";
+            navigator.geolocation.getCurrentPosition((pos) => {
+                userLocationUrl = `http://googleusercontent.com/maps.google.com/4{pos.coords.latitude},${pos.coords.longitude}`;
+                btn.innerText = "✅ تم تحديد موقعك";
+                btn.classList.add('success');
+            }, () => { alert("يرجى تفعيل GPS"); btn.innerText = "📍 تحديد موقعك GPS"; });
+        }
+    }
 
     async function handleOrder() {
-        const name = document.getElementById('custName').value.trim();
+        if(!storeSettings.is_open) return alert("نعتذر، المحل مغلق");
         const phone = document.getElementById('custPhone').value.trim();
         const total = document.getElementById('modalTotal').innerText;
-        const notes = document.getElementById('orderNotes').value;
-
-        if(!name || !phone || !userLocationUrl || Object.keys(cart).length === 0) return alert("اكمل البيانات والموقع 📍");
-        
-        const btn = document.getElementById('sendOrderBtn');
-        btn.disabled = true; btn.innerText = "جاري الإرسال...";
+        if(phone.length < 9 || !userLocationUrl || Object.keys(cart).length === 0) return alert("يرجى إكمال البيانات");
         
         try {
-            const { error } = await _supabase.from('orders').insert([{ 
-                customer_name: name, 
-                phone: phone, 
-                location_url: userLocationUrl, 
-                items: cart, 
-                total_price: parseFloat(total), 
-                notes: notes 
-            }]);
-
-            if (error) throw error;
-
-            let msg = `*🧾 طلب جديد*%0A*الاسم:* ${name}%0A*الهاتف:* ${phone}%0A*الموقع:* ${userLocationUrl}%0A*الطلبات:*%0A`;
-            for(let id in cart) msg += `- ${cart[id].name} (x${cart[id].qty})%0A`;
-            msg += `*الإجمالي:* ${total} ريال`;
-            
-            window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${msg}`, '_blank');
+            await _supabase.from('orders').insert([{ phone: "+967" + phone, location_url: userLocationUrl, items: cart, total_price: parseFloat(total), notes: document.getElementById('orderNotes').value }]);
+            let msg = `*🧾 طلب جديد*%0A*الهاتف:* 967${phone}%0A*الموقع:* ${userLocationUrl}%0A*الإجمالي:* ${total} ريال`;
+            window.open(`https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(msg)}`, '_blank');
             cart={}; updateUI(); toggleModal();
-            alert("تم إرسال الطلب بنجاح!");
-        } catch(e) { 
-            console.error(e);
-            alert("حدث خطأ في الإرسال، يرجى التأكد من إعدادات Supabase"); 
-        } finally { btn.disabled=false; btn.innerText="تأكيد الطلب عبر الواتساب 💬"; }
+        } catch(e) { alert("خطأ في الإرسال"); }
     }
 </script>
 </body>
