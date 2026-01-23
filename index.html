@@ -203,6 +203,16 @@
     border: 2px solid #eee;
     resize: none;
 }
+.option-item {
+    transition: all 0.2s ease-in-out;
+}
+.option-item:active {
+    transform: scale(0.98);
+}
+.selection-indicator {
+    transition: background 0.2s, border-color 0.2s;
+}
+
 }
 
     </style>
@@ -300,6 +310,22 @@
         </button>
     </div>
 </div>
+<div id="optionsModal" class="modal" onclick="closeOptionsOnOverlay(event)">
+    <div class="modal-content" style="border-radius: 25px 25px 0 0; padding: 25px;">
+        <div id="optionsHeader" style="text-align: center; margin-bottom: 20px;">
+            <h3 id="optProductName" style="margin: 0;">اسم المنتج</h3>
+            <p style="color: #666; font-size: 14px;">اختر الإضافات أو الحجم المناسب</p>
+        </div>
+        
+        <div id="optionsList" style="margin-bottom: 20px;">
+            </div>
+
+        <button onclick="confirmOptionsAndAdd()" style="background: var(--luxury-gradient); color: white; border: none; width: 100%; padding: 15px; border-radius: 15px; font-weight: bold; font-size: 16px;">
+            تأكيد وإضافة للسلة 🛒
+        </button>
+    </div>
+</div>
+
 
 
 <script>
@@ -385,33 +411,234 @@
         if (input.value.length > 0 && input.value[0] !== '7') { input.value = ''; alert("يجب أن يبدأ بـ 7"); }
     }
 
-    function addToCart(id) {
-        if(!storeSettings.is_open) return alert("المحل مغلق حالياً");
-        const item = allProducts.find(x => x.id === id);
-        if (cart[id]) cart[id].qty++; else cart[id] = { ...item, qty: 1 };
-        updateUI();
+    let currentProductForOptions = null;
+let selectedOptions = [];
+
+// 1. تعديل وظيفة إضافة المنتج لتتحقق من وجود خيارات
+async function addToCart(id) {
+    if(!storeSettings.is_open) return alert("المحل مغلق حالياً");
+    
+    const item = allProducts.find(x => x.id === id);
+    
+    // جلب الخيارات من قاعدة البيانات لهذا المنتج
+    const { data: options, error } = await _supabase
+        .from('product_options')
+        .select('*')
+        .eq('product_id', id);
+
+    if (options && options.length > 0) {
+        showOptionsModal(item, options);
+    } else {
+        // إذا لم توجد خيارات، أضفه مباشرة كما كان سابقاً
+        directAddToCart(item);
+    }
+}
+
+// 2. إظهار نافذة الخيارات
+function showOptionsModal(product, options) {
+    currentProductForOptions = product;
+    selectedOptions = []; 
+    
+    document.getElementById('optProductName').innerText = product.name;
+    const list = document.getElementById('optionsList');
+    list.innerHTML = '';
+
+    // متغير لتخزين أول حجم يقابله الكود لجعله افتراضياً
+    let firstSizeElement = null;
+    let firstSizeOption = null;
+
+    options.forEach((opt, index) => {
+        const isSize = opt.option_name.includes("حجم");
+        
+        let displayPrice = isSize ? (product.price + opt.price_impact) + " ريال" : "+ " + opt.price_impact + " ريال";
+        
+        // إنشاء عنصر الخيار
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'option-item';
+        itemDiv.setAttribute('data-type', isSize ? 'size' : 'extra');
+        itemDiv.style = "display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.3s;";
+        
+        itemDiv.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="selection-indicator" style="width: 22px; height: 22px; border: 2px solid #ddd; border-radius: ${isSize ? '50%' : '6px'}; display: flex; align-items: center; justify-content: center;">
+                    <div class="dot" style="width: 10px; height: 10px; background: transparent; border-radius: inherit;"></div>
+                </div>
+                <span style="font-weight: 600;">${opt.option_name}</span>
+            </div>
+            <div style="font-weight: 800; color: var(--primary-orange); font-size: 15px;">${displayPrice}</div>
+        `;
+
+        // إضافة حدث الضغط
+        itemDiv.onclick = () => handleOptionSelection(itemDiv, opt);
+        
+        list.appendChild(itemDiv);
+
+        // إذا كان هذا أول "حجم" نقابله، نحفظه لنختاره تلقائياً
+        if (isSize && !firstSizeElement) {
+            firstSizeElement = itemDiv;
+            firstSizeOption = opt;
+        }
+    });
+
+    document.getElementById('optionsModal').style.display = 'flex';
+
+    // تفعيل الخيار الافتراضي (أول حجم) برمجياً بعد فتح النافذة
+    if (firstSizeElement) {
+        handleOptionSelection(firstSizeElement, firstSizeOption);
+    }
+}
+
+
+
+
+// 3. اختيار/إلغاء اختيار الخيار
+function toggleOption(element, option) {
+    const checkbox = element.querySelector('input');
+    checkbox.checked = !checkbox.checked;
+    
+    if (checkbox.checked) {
+        selectedOptions.push(option);
+        element.style.borderColor = "var(--primary-orange)";
+        element.style.background = "#fff9f5";
+    } else {
+        selectedOptions = selectedOptions.filter(o => o.id !== option.id);
+        element.style.borderColor = "#eee";
+        element.style.background = "white";
+    }
+}
+
+// 4. التأكيد والإضافة النهائية للسلة
+function confirmOptionsAndAdd() {
+    // اختياري: التأكد أن العميل اختار حجماً إذا كان المنتج يوفر أحجاماً
+    const hasSizesInList = document.querySelectorAll('.option-item[data-type="size"]').length > 0;
+    const selectedSize = selectedOptions.find(opt => opt.option_name.includes("حجم"));
+
+    if (hasSizesInList && !selectedSize) {
+        return alert("يرجى اختيار الحجم أولاً");
     }
 
-    function updateUI() {
-        let count = 0, total = 0;
-        const list = document.getElementById('cartItemsList');
-        list.innerHTML = '';
-        for (let id in cart) {
-            count += cart[id].qty; total += (cart[id].qty * cart[id].price);
-            list.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f9f9f9;">
-                <div><b>${cart[id].name}</b><br><small>${cart[id].price} ريال</small></div>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <button style="width:30px; height:30px; border-radius:10px; border:1px solid #ddd; background:#fff;" onclick="changeQty(${id}, -1)">-</button>
-                    <span style="font-weight:bold;">${cart[id].qty}</span>
-                    <button style="width:30px; height:30px; border-radius:10px; border:1px solid #ddd; background:#fff;" onclick="changeQty(${id}, 1)">+</button>
+    // نفس منطق الإضافة السابق...
+    let finalItem = { ...currentProductForOptions };
+    let extraPrice = 0;
+    let optionsNames = [];
+
+    selectedOptions.forEach(opt => {
+        extraPrice += opt.price_impact;
+        optionsNames.push(opt.option_name);
+    });
+
+    const cartId = finalItem.id + "_" + optionsNames.join("_");
+    
+    if (cart[cartId]) {
+        cart[cartId].qty++;
+    } else {
+        cart[cartId] = {
+            ...finalItem,
+            price: finalItem.price + extraPrice,
+            name: finalItem.name + (optionsNames.length > 0 ? ` (${optionsNames.join(' + ')})` : ''),
+            qty: 1
+        };
+    }
+
+    document.getElementById('optionsModal').style.display = 'none';
+    updateUI();
+}
+
+
+// الإضافة المباشرة (للمنتجات بدون خيارات)
+function directAddToCart(item) {
+    if (cart[item.id]) cart[item.id].qty++; 
+    else cart[item.id] = { ...item, qty: 1 };
+    updateUI();
+    // تأثير بصري بسيط
+    alert(`تم إضافة ${item.name} للسلة`);
+}
+
+function closeOptionsOnOverlay(e) { 
+    if(e.target.id === 'optionsModal') document.getElementById('optionsModal').style.display = 'none'; 
+}
+
+
+    // تحديث واجهة السلة لتعمل مع الخيارات
+function updateUI() {
+    let count = 0, total = 0;
+    const list = document.getElementById('cartItemsList');
+    list.innerHTML = '';
+    
+    for (let cartId in cart) { // نستخدم cartId هنا لأن المعرف قد يكون (1_حجم_كبير)
+        let item = cart[cartId];
+        count += item.qty; 
+        total += (item.qty * item.price);
+        
+        list.innerHTML += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #f9f9f9;">
+                <div style="flex:1;">
+                    <b style="font-size: 14px;">${item.name}</b>
+                    <div style="color: var(--primary-orange); font-size: 13px; font-weight: bold;">${item.price} ريال</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button style="width:32px; height:32px; border-radius:10px; border:1px solid #ddd; background:#fff; font-weight:bold;" 
+                            onclick="changeQty('${cartId}', -1)">-</button>
+                    <span style="font-weight:bold; min-width:20px; text-align:center;">${item.qty}</span>
+                    <button style="width:32px; height:32px; border-radius:10px; border:1px solid #ddd; background:#fff; font-weight:bold;" 
+                            onclick="changeQty('${cartId}', 1)">+</button>
                 </div>
             </div>`;
-        }
-        document.getElementById('nav-count').innerText = count;
-        document.getElementById('nav-total').innerText = total;
-        document.getElementById('modalTotal').innerText = total;
-        localStorage.setItem('royal_bakery_cart', JSON.stringify(cart));
     }
+    
+    document.getElementById('nav-count').innerText = count;
+    document.getElementById('nav-total').innerText = total;
+    document.getElementById('modalTotal').innerText = total;
+    localStorage.setItem('royal_bakery_cart', JSON.stringify(cart));
+}
+
+// تعديل وظيفة تغيير الكمية لتقبل المعرف النصي (cartId)
+function changeQty(cartId, d) { 
+    if (cart[cartId]) {
+        cart[cartId].qty += d; 
+        if(cart[cartId].qty <= 0) delete cart[cartId]; 
+        updateUI(); 
+    }
+}
+function handleOptionSelection(element, option) {
+    const isSize = element.getAttribute('data-type') === 'size';
+
+    if (isSize) {
+        // 1. إذا كان المختار "حجم"، قم بإلغاء تحديد أي حجم آخر في النافذة
+        const allOptions = document.querySelectorAll('.option-item[data-type="size"]');
+        allOptions.forEach(el => {
+            el.style.borderColor = "#eee";
+            el.style.background = "white";
+            el.querySelector('.selection-indicator').style.background = "transparent";
+        });
+        
+        // 2. إزالة أي "حجم" سابق من مصفوفة الاختيارات
+        selectedOptions = selectedOptions.filter(opt => !opt.option_name.includes("حجم"));
+        
+        // 3. إضافة الحجم الجديد
+        selectedOptions.push(option);
+        element.style.borderColor = "var(--primary-orange)";
+        element.style.background = "#fff9f5";
+        element.querySelector('.selection-indicator').style.background = "var(--primary-orange)";
+        
+    } else {
+        // منطق الإضافات العادية (تبديل الاختيار Toggle)
+        const index = selectedOptions.findIndex(opt => opt.id === option.id);
+        if (index > -1) {
+            selectedOptions.splice(index, 1);
+            element.style.borderColor = "#eee";
+            element.style.background = "white";
+            element.querySelector('.selection-indicator').style.background = "transparent";
+        } else {
+            selectedOptions.push(option);
+            element.style.borderColor = "var(--primary-orange)";
+            element.style.background = "#fff9f5";
+            element.querySelector('.selection-indicator').style.background = "var(--primary-orange)";
+        }
+    }
+}
+
+
 
     function changeQty(id, d) { cart[id].qty += d; if(cart[id].qty<=0) delete cart[id]; updateUI(); }
     function clearCart() { cart = {}; updateUI(); }
