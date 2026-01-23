@@ -125,15 +125,86 @@
         }
         #fullImage { max-width: 90%; max-height: 80%; border-radius: 15px; border: 3px solid white; }
 
+                /* تحسين زر الموقع وإضافة تأثيرات بصرية */
         .location-btn {
-            width: 100%; background: #fef2f2; color: var(--red); border: 2px dashed var(--red); 
-            padding: 15px; border-radius: 15px; margin: 15px 0; cursor: pointer; font-weight: bold;
-            transition: 0.3s;
+            width: 100%;
+            background: #fff5f5;
+            color: var(--red);
+            border: 2px solid var(--red);
+            padding: 16px;
+            border-radius: 15px;
+            margin: 15px 0;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            /* إضافة حركة نبض خفيفة للزر */
+            animation: pulse-red 2s infinite;
         }
-        .location-btn.success { background: #f0fdf4; color: #166534; border-style: solid; border-color: #166534; }
-        #status-dot { width: 10px; height: 10px; border-radius: 50%; background: #bbb; }
 
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        /* تأثير النبض لجذب الانتباه */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+
+        /* تأثير اللمعان المتحرك */
+        .location-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.6), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; transition: 0.7s; }
+            20% { left: 100%; transition: 0.7s; }
+            100% { left: 100%; transition: 0.7s; }
+        }
+
+        .location-btn.success {
+            background: #f0fdf4;
+            color: #166534;
+            border-color: #166534;
+            animation: none; /* إيقاف التنبيه بعد النجاح */
+        }
+
+        .location-btn:active {
+            transform: scale(0.95);
+        }
+        /* تأثير النبض اللطيف لإطار الملاحظات عند الحاجة للعنوان */
+.attention-needed {
+    border: 2px solid var(--red) !important;
+    background-color: #fff5f5 !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* تحسين شكل خانة الملاحظات بشكل عام */
+#orderNotes {
+    transition: all 0.3s ease;
+    border: 2px solid #eee;
+    resize: none;
+}
+}
+
     </style>
 </head>
 <body>
@@ -177,18 +248,36 @@
         <div id="cartItemsList"></div>
 
         <div style="margin-top: 25px;">
-            <div class="phone-input-container">
-                <div class="country-prefix"><img src="https://flagcdn.com/w40/ye.png" width="24"><span>+967</span></div>
-                <input type="tel" id="custPhone" placeholder="7XXXXXXXX" oninput="validatePhone(this); saveUserData();" maxlength="9">
-            </div>
-            <button id="getLocBtn" onclick="getLocation()" class="location-btn">📍 تحديد موقعك GPS</button>
-            <textarea id="orderNotes" style="width: 100%; height: 60px; padding: 10px; border-radius: 10px; border: 1px solid #eee; outline: none; margin-bottom:15px;" placeholder="أي ملاحظات إضافية؟"></textarea>
-        </div>
+    <div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 600; padding-right: 5px;">
+        📱 سيتم التواصل بك عبر رقم الهاتف هذا:
+    </div>
+    
+    <div class="phone-input-container">
+        <div class="country-prefix"><img src="https://flagcdn.com/w40/ye.png" width="24"><span>+967</span></div>
+        <input type="tel" id="custPhone" placeholder="7XXXXXXXX" oninput="validatePhone(this); saveUserData();" maxlength="9">
+    </div>
+    
+    <button id="getLocBtn" onclick="getLocation()" class="location-btn">
+        <span id="locIcon" style="font-size: 20px;">📍</span>
+        <span id="locText">تحديد موقع التوصيل GPS</span>
+    </button>
+
+    <textarea id="orderNotes" style="width: 100%; height: 60px; padding: 10px; border-radius: 10px; border: 1px solid #eee; outline: none; margin-bottom:15px;" placeholder="أي ملاحظات إضافية؟"></textarea>
+</div>
+
 
         <div style="background: #fff9f5; padding: 20px; border-radius: 20px; margin: 20px 0; text-align: center; border: 1px solid #ffe0cc;">
-            <div style="color: #2e7d32; font-weight: bold; font-size: 14px; margin-bottom: 8px;">🛵 التوصيل مجاني للجميع!</div>
-            <span style="font-size: 20px; font-weight: 800;">الإجمالي: <span id="modalTotal" style="color:var(--primary-orange);">0</span> ريال</span>
-        </div>
+    <div style="color: var(--dark-black); font-weight: 800; font-size: 15px; margin-bottom: 5px;">💰 الدفع عند الاستلام</div>
+    
+    <div style="color: #2e7d32; font-weight: bold; font-size: 13px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+        <span style="background: #e8f5e9; padding: 2px 8px; border-radius: 8px;">🛵 التوصيل مجاني للجميع!</span>
+    </div>
+
+    <div style="height: 1px; background: #eee; margin-bottom: 12px;"></div>
+    
+    <span style="font-size: 20px; font-weight: 800;">الإجمالي: <span id="modalTotal" style="color:var(--primary-orange);">0</span> ريال</span>
+</div>
+
 
         <button id="sendOrderBtn" onclick="handleOrder()" style="background: var(--whatsapp-green); color: white; border: none; width: 100%; padding: 18px; border-radius: 20px; font-size: 18px; font-weight: bold; cursor: pointer;">تأكيد الطلب عبر الواتساب 💬</button>
         <button onclick="clearCart()" style="width: 100%; background: none; border: none; color: var(--red); margin-top: 20px; cursor: pointer; font-weight: 600;">🗑️ تفريغ السلة</button>
@@ -316,21 +405,47 @@
     function saveUserData() { localStorage.setItem('royal_bakery_user_phone', document.getElementById('custPhone').value); }
     function loadUserData() { document.getElementById('custPhone').value = localStorage.getItem('royal_bakery_user_phone') || ''; }
 
-    function getLocation() {
+        function getLocation() {
     const btn = document.getElementById('getLocBtn');
+    const locIcon = document.getElementById('locIcon');
+    const locText = document.getElementById('locText');
+    const orderNotes = document.getElementById('orderNotes');
+
     if (navigator.geolocation) {
-        btn.innerText = "⏳ جاري التحديد...";
+        locText.innerText = "جاري البحث عن موقعك...";
+        locIcon.innerText = "⏳";
+        
         navigator.geolocation.getCurrentPosition((pos) => {
-            // تصحيح الرابط هنا
             userLocationUrl = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
-            btn.innerText = "✅ تم تحديد موقعك";
+            locText.innerText = "تم تحديد موقعك بنجاح";
+            locIcon.innerText = "✅";
             btn.classList.add('success');
+            btn.style.animation = "none";
+            
+            // إعادة الشكل الطبيعي
+            orderNotes.classList.remove('attention-needed');
+            orderNotes.placeholder = "أي ملاحظات إضافية؟";
         }, () => { 
-            alert("يرجى تفعيل الـ GPS ومنح الإذن للمتصفح"); 
-            btn.innerText = "📍 تحديد موقعك GPS"; 
-        });
+            // في حال الفشل - تخصيص التصميم يدوياً
+            locText.innerText = "يرجى كتابة العنوان يدوياً بالأسفل";
+            locIcon.innerText = "✍️";
+            btn.style.borderColor = "#ccc";
+            btn.style.color = "#888";
+            btn.style.background = "#f5f5f5";
+            btn.style.animation = "none";
+
+            // إبراز خانة الملاحظات بتنسيق فخم
+            orderNotes.classList.add('attention-needed');
+            orderNotes.placeholder = "📍 نعتذر، لم نتمكن من تحديد موقعك.. يرجى كتابة (الحي - الشارع - رقم المنزل) هنا لضمان وصول الطلب بدقة ✨";
+            orderNotes.focus();
+            
+            userLocationUrl = "تحديد يدوي (العنوان في الملاحظات)";
+        }, { enableHighAccuracy: true });
     }
 }
+
+
+
 
 
     async function handleOrder() {
