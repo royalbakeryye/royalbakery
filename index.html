@@ -283,6 +283,24 @@
         <button onclick="clearCart()" style="width: 100%; background: none; border: none; color: var(--red); margin-top: 20px; cursor: pointer; font-weight: 600;">🗑️ تفريغ السلة</button>
     </div>
 </div>
+<div id="locationChoiceModal" class="modal" style="align-items: center; background: rgba(0,0,0,0.7);">
+    <div class="modal-content" style="border-radius: 25px; width: 85%; max-width: 350px; text-align: center; padding: 25px;">
+        <div style="font-size: 40px; margin-bottom: 15px;">📍</div>
+        <h3 style="margin-bottom: 10px;">تحديد الموقع</h3>
+        <p style="font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 20px;">
+            تعذر الحصول على موقعك تلقائياً. كيف ترغب في تزويدنا بالعنوان؟
+        </p>
+        
+        <button onclick="retryLocation()" style="width: 100%; background: var(--luxury-gradient); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; margin-bottom: 10px; cursor: pointer;">
+            🔄 إعادة المحاولة (تفعيل GPS)
+        </button>
+        
+        <button onclick="switchToManual()" style="width: 100%; background: #f0f0f0; color: #333; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer;">
+            ✍️ كتابة العنوان يدوياً
+        </button>
+    </div>
+</div>
+
 
 <script>
     const SUPABASE_URL = 'https://gemnsdsexkbyfdpozcwu.supabase.co';
@@ -405,68 +423,110 @@
     function saveUserData() { localStorage.setItem('royal_bakery_user_phone', document.getElementById('custPhone').value); }
     function loadUserData() { document.getElementById('custPhone').value = localStorage.getItem('royal_bakery_user_phone') || ''; }
 
-        function getLocation() {
+        // دالة تحديد الموقع الرئيسية
+function getLocation() {
     const btn = document.getElementById('getLocBtn');
     const locIcon = document.getElementById('locIcon');
     const locText = document.getElementById('locText');
-    const orderNotes = document.getElementById('orderNotes');
 
     if (navigator.geolocation) {
         locText.innerText = "جاري البحث عن موقعك...";
         locIcon.innerText = "⏳";
         
         navigator.geolocation.getCurrentPosition((pos) => {
+            // حالة النجاح
             userLocationUrl = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
             locText.innerText = "تم تحديد موقعك بنجاح";
             locIcon.innerText = "✅";
             btn.classList.add('success');
             btn.style.animation = "none";
-            
-            // إعادة الشكل الطبيعي
-            orderNotes.classList.remove('attention-needed');
-            orderNotes.placeholder = "أي ملاحظات إضافية؟";
+            document.getElementById('orderNotes').classList.remove('attention-needed');
         }, () => { 
-            // في حال الفشل - تخصيص التصميم يدوياً
-            locText.innerText = "يرجى كتابة العنوان يدوياً بالأسفل";
-            locIcon.innerText = "✍️";
-            btn.style.borderColor = "#ccc";
-            btn.style.color = "#888";
-            btn.style.background = "#f5f5f5";
-            btn.style.animation = "none";
-
-            // إبراز خانة الملاحظات بتنسيق فخم
-            orderNotes.classList.add('attention-needed');
-            orderNotes.placeholder = "📍 نعتذر، لم نتمكن من تحديد موقعك.. يرجى كتابة (الحي - الشارع - رقم المنزل) هنا لضمان وصول الطلب بدقة ✨";
-            orderNotes.focus();
-            
-            userLocationUrl = "تحديد يدوي (العنوان في الملاحظات)";
-        }, { enableHighAccuracy: true });
+            // حالة الفشل - إظهار نافذة الخيارات المصممة (UI)
+            document.getElementById('locationChoiceModal').style.display = 'flex';
+        }, { enableHighAccuracy: true, timeout: 6000 });
     }
+}
+
+// دالة إعادة المحاولة
+function retryLocation() {
+    document.getElementById('locationChoiceModal').style.display = 'none';
+    getLocation();
+}
+
+// دالة التحويل للوضع اليدوي
+function switchToManual() {
+    document.getElementById('locationChoiceModal').style.display = 'none';
+    const btn = document.getElementById('getLocBtn');
+    const locIcon = document.getElementById('locIcon');
+    const locText = document.getElementById('locText');
+    const orderNotes = document.getElementById('orderNotes');
+
+    locText.innerText = "تم اختيار التحديد اليدوي";
+    locIcon.innerText = "✍️";
+    btn.style.borderColor = "#ccc";
+    btn.style.color = "#888";
+    btn.style.background = "#f5f5f5";
+    
+    orderNotes.classList.add('attention-needed');
+    orderNotes.placeholder = "📍 يرجى كتابة (الحي - الشارع - معلم بارز) هنا بدقة..";
+    userLocationUrl = "تحديد يدوي (العنوان مكتوب في الملاحظات)";
+    
+    // التمرير لخانة الملاحظات والتركيز عليها
+    orderNotes.scrollIntoView({ behavior: 'smooth' });
+    orderNotes.focus();
 }
 
 
 
 
 
+
+
     async function handleOrder() {
-    if(!storeSettings.is_open) return alert("نعتذر، المحل مغلق");
+    // 1. التحقق من حالة المتجر
+    if(!storeSettings.is_open) return alert("نعتذر، المحل مغلق حالياً");
     
     const phone = document.getElementById('custPhone').value.trim();
     const total = document.getElementById('modalTotal').innerText;
     const notes = document.getElementById('orderNotes').value.trim();
+    const sendBtn = document.getElementById('sendOrderBtn');
     
-    if(phone.length < 9 || !userLocationUrl || Object.keys(cart).length === 0) {
-        return alert("يرجى إكمال البيانات: رقم الهاتف، تحديد الموقع، وإضافة منتجات للسلة");
+    // 2. التحقق من صحة البيانات الأساسية (رقم الهاتف والسلة)
+    if(phone.length < 9 || Object.keys(cart).length === 0) {
+        // إضافة تأثير الاهتزاز للزر للتنبيه بصرياً
+        sendBtn.style.animation = "shake 0.5s ease-in-out";
+        setTimeout(() => sendBtn.style.animation = "", 500);
+        
+        return alert("يرجى إدخال رقم هاتف صحيح وإضافة منتجات للسلة");
     }
 
-    // 1. بناء قائمة المنتجات بشكل منظم
+    // 3. التحقق من تحديد الموقع (GPS أو يدوي)
+    if (!userLocationUrl) {
+        sendBtn.style.animation = "shake 0.5s ease-in-out";
+        setTimeout(() => sendBtn.style.animation = "", 500);
+        return alert("يرجى تحديد موقع التوصيل أولاً (GPS أو يدوي)");
+    }
+
+    // 4. فحص العنوان اليدوي (إذا كان العميل اختار الكتابة اليدوية ولم يكتب وصفاً كافياً)
+    if (userLocationUrl.includes("يدوي") && notes.length < 10) {
+        sendBtn.style.animation = "shake 0.5s ease-in-out";
+        setTimeout(() => sendBtn.style.animation = "", 500);
+        
+        alert("يرجى كتابة وصف العنوان بالتفصيل في خانة الملاحظات (الحي، الشارع، معلم بارز).");
+        document.getElementById('orderNotes').focus();
+        document.getElementById('orderNotes').classList.add('attention-needed');
+        return;
+    }
+
+    // 5. بناء قائمة المنتجات بشكل منظم
     let itemsList = "";
     for (let id in cart) {
         let item = cart[id];
         itemsList += `🔸 *${item.name}* \n   الكمية: (${item.qty}) | السعر: ${item.qty * item.price} ريال\n`;
     }
 
-    // 2. صياغة الرسالة النهائية بتنسيق احترافي
+    // 6. صياغة الرسالة النهائية بتنسيق ملكي
     let message = `*👑 طلب جديد - المخبز الملكي 👑*
 ------------------------------
 *📞 رقم العميل:*
@@ -477,8 +537,9 @@ ${itemsList}
 ------------------------------
 *💰 الإجمالي النهائي:* ${total} ريال
 *🚚 التوصيل:* مجاني
+*💵 طريقة الدفع:* عند الاستلام
 
-*📍 موقع التوصيل (GPS):*
+*📍 موقع التوصيل:*
 ${userLocationUrl}
 
 ${notes ? `*📝 ملاحظات إضافية:* \n${notes}` : ''}
@@ -486,7 +547,7 @@ ${notes ? `*📝 ملاحظات إضافية:* \n${notes}` : ''}
 *شكراً لاختيارك المخبز الملكي! ✨*`;
 
     try {
-        // حفظ في قاعدة البيانات
+        // 7. حفظ الطلب في قاعدة بيانات Supabase للتوثيق
         await _supabase.from('orders').insert([{ 
             phone: "+967" + phone, 
             location_url: userLocationUrl, 
@@ -495,19 +556,22 @@ ${notes ? `*📝 ملاحظات إضافية:* \n${notes}` : ''}
             notes: notes 
         }]);
 
-        // فتح واتساب بالرسالة المنسقة
+        // 8. فتح واتساب بالرسالة المنسقة
         const whatsappUrl = `https://wa.me/${storeSettings.whatsapp_number}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
         
-        // تنظيف السلة
+        // 9. تنظيف السلة وإغلاق النافذة بعد النجاح
         cart = {}; 
         updateUI(); 
         toggleModal();
+        alert("تم إرسال طلبك بنجاح! سيتم التواصل معك قريباً.");
         
     } catch(e) { 
-        alert("حدث خطأ أثناء إرسال الطلب، يرجى المحاولة لاحقاً"); 
+        alert("حدث خطأ أثناء إرسال الطلب، يرجى المحاولة لاحقاً أو التواصل معنا مباشرة."); 
+        console.error(e);
     }
 }
+
 
 </script>
 </body>
