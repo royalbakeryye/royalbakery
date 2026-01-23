@@ -212,6 +212,15 @@
 .selection-indicator {
     transition: background 0.2s, border-color 0.2s;
 }
+.open-status-tag {
+    color: #2ecc71; /* لون أخضر */
+    font-weight: 900; /* عريض جداً */
+    font-size: 13px;
+    display: none; /* مخفي افتراضياً */
+    animation: fadeIn 0.5s ease;
+    padding: 4px 8px;
+}
+
 
 }
 
@@ -223,9 +232,11 @@
     <div class="header-brand">
         <div class="logo">ROYAL <span>BAKERY</span> 👑</div>
         <div id="store-closed-msg" class="closed-status-tag"></div>
+        <div id="store-open-msg" class="open-status-tag"></div>
     </div>
     <div id="status-dot"></div>
 </header>
+
 
 <div class="categories-nav" id="catNav">
     <button class="cat-btn active" onclick="filterProducts('all', this)">✨ الكل</button>
@@ -346,22 +357,35 @@
     };
 
     async function fetchSettings() {
-        try {
-            const { data } = await _supabase.from('store_settings').select('*').limit(1).single();
-            if (data) {
-                storeSettings = data;
-                const statusDot = document.getElementById('status-dot');
-                const closedMsg = document.getElementById('store-closed-msg');
-                if (!storeSettings.is_open) {
-                    statusDot.style.background = '#e74c3c';
-                    closedMsg.innerText = storeSettings.closing_message;
-                    closedMsg.style.display = 'inline-block';
-                } else {
-                    statusDot.style.background = '#2ecc71';
+    try {
+        const { data } = await _supabase.from('store_settings').select('*').limit(1).single();
+        if (data) {
+            storeSettings = data;
+            const statusDot = document.getElementById('status-dot');
+            const closedMsg = document.getElementById('store-closed-msg');
+            const openMsg = document.getElementById('store-open-msg');
+
+            if (!storeSettings.is_open) {
+                // حالة الإغلاق
+                statusDot.style.background = '#e74c3c';
+                closedMsg.innerText = storeSettings.closing_message;
+                closedMsg.style.display = 'inline-block';
+                openMsg.style.display = 'none'; // إخفاء رسالة الفتح
+            } else {
+                // حالة الفتح
+                statusDot.style.background = '#2ecc71';
+                closedMsg.style.display = 'none'; // إخفاء رسالة الإغلاق
+                
+                // إظهار نص الفتح من قاعدة البيانات
+                if (storeSettings.opening_status_text) {
+                    openMsg.innerText = storeSettings.opening_status_text;
+                    openMsg.style.display = 'inline-block';
                 }
             }
-        } catch (e) { }
-    }
+        }
+    } catch (e) { console.error("Error fetching settings:", e); }
+}
+
 
     async function fetchCategories() {
         try {
