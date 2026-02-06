@@ -374,12 +374,13 @@
 
 
 <script>
-    // التعديل المطلوب لتجاوز الحظر في اليمن
-const supabaseUrl = 'https://royalbakeryye.com/supabase-proxy'; 
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlbW5zZHNleGtieWZkcG96Y3d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3NDgzNzcsImV4cCI6MjA4MjMyNDM3N30.QQt3zYL5rF4kr1u7cy2H_w3D08_GubhEL-Jpbdusjkc';
+    // 1. إعدادات الربط عبر البروكسي لتجاوز الحظر في اليمن
+    // تأكد أنك رفعت ملف vercel.json للمجلد الرئيسي في GitHub بنفس الاسم المكتوب هنا
+    const supabaseUrl = '/supabase-proxy'; 
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlbW5zZHNleGtieWZkcG96Y3d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3NDgzNzcsImV4cCI6MjA4MjMyNDM3N30.QQt3zYL5rF4kr1u7cy2H_w3D08_GubhEL-Jpbdusjkc';
 
-// الربط سيتم الآن عبر سيرفرات Vercel وليس مباشرة
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    // 2. إنشاء اتصال (استخدمنا S كبيرة للمكتبة و _supabase كاسم متغير ليطابق دوالك)
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
     let allProducts = [];
 let allOptions = []; // مصفوفة جديدة لتخزين كافة خيارات المنتجات
